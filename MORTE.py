@@ -3,6 +3,7 @@ import threading
 import socket
 import time
 import concurrent.futures
+import os
 from scapy.all import *
 
 # Variáveis para medição de desempenho
@@ -10,6 +11,10 @@ packets_sent = 0
 packets_lost = 0
 start_time = 0
 response_time = 0
+
+# Variáveis para controle de tráfego
+max_packets_per_second = 100  # Valor padrão, pode ser ajustado pelo usuário
+interval = 1.0 / max_packets_per_second
 
 # Função para gerar uma lista de endereços IP aleatórios (para melhor desempenho)
 def generate_random_ips(count):
@@ -37,8 +42,8 @@ def send_packet(source_ip, target_IP, source_port, packet_type, timeout):
     packets_sent += 1
 
 # Função para enviar pacotes em paralelo
-def send_packets(target_site, num_threads, interval, specific_ports, packet_type, total_packets, timeout):
-    global packets_sent, packets_lost, start_time, response_time
+def send_packets(target_site, num_threads, specific_ports, packet_type, total_packets, timeout):
+    global packets_sent, packets_lost, start_time, response_time, interval
 
     target_IP = resolve_target_IP(target_site)
     if not target_IP:
@@ -60,6 +65,10 @@ def send_packets(target_site, num_threads, interval, specific_ports, packet_type
             for future in futures:
                 future.result()
 
+            # Limpar a tela a cada 2 mensagens exibidas
+            if packets_sent % 2 == 0:
+                os.system('cls' if os.name == 'nt' else 'clear')
+
     end_time = time.time()
     elapsed_time = end_time - start_time
 
@@ -68,28 +77,47 @@ def send_packets(target_site, num_threads, interval, specific_ports, packet_type
     packets_lost_percentage = (packets_lost / packets_sent) * 100
 
     print("\n===== Resultados de Desempenho =====")
-    print(f"Pacotes enviados: {packets_sent}")
-    print(f"Pacotes perdidos: {packets_lost} ({packets_lost_percentage:.2f}% do total)")
-    print(f"Tempo total de envio: {elapsed_time:.2f} segundos")
-    print(f"Taxa de envio média: {packets_per_second:.2f} pacotes por segundo")
-    print(f"Tempo de resposta do site: {response_time:.2f} segundos")
+    print("Pacotes enviados: {}".format(packets_sent))
+    print("Pacotes perdidos: {} ({:.2f}% do total)".format(packets_lost, packets_lost_percentage))
+    print("Tempo total de envio: {:.2f} segundos".format(elapsed_time))
+    print("Taxa de envio média: {:.2f} pacotes por segundo".format(packets_per_second))
+    print("Tempo de resposta do site: {:.2f} segundos".format(response_time))
 
 # Função que imprime o menu principal e retorna a escolha do usuário
 def menu():
+    global max_packets_per_second, interval
+
     print("===== Menu =====")
     print("1. Enviar pacotes")
-    print("2. Sair")
+    print("2. Configurar taxa máxima de envio")
+    print("3. Sair")
 
     choice = input("Escolha uma opção: ")
+    if choice == '2':
+        max_packets_per_second = int(input("Digite a taxa máxima de envio de pacotes por segundo: "))
+        interval = 1.0 / max_packets_per_second
+        print("Taxa máxima de envio definida para {} pacotes por segundo.".format(max_packets_per_second))
     return choice
 
 # Função principal do programa
 def main():
     target_site = input("Digite o nome do site de destino: ")
     num_threads = int(input("Digite a quantidade de threads (recomendado até 500): "))
-    interval = float(input("Digite o intervalo de envio de pacotes (em segundos): "))
-    specific_ports = list(map(int, input("Digite as portas específicas separadas por espaços (exemplo: 80 443): ").split()))
-    packet_type = input("Digite o tipo de pacote (TCP, UDP, ICMP): ").upper()
+
+    while True:
+        specific_ports = list(map(int, input("Digite as portas específicas separadas por espaços (exemplo: 80 443): ").split()))
+        if not specific_ports:
+            print("Insira pelo menos uma porta específica.")
+        else:
+            break
+
+    while True:
+        packet_type = input("Digite o tipo de pacote (TCP, UDP, ICMP): ").upper()
+        if packet_type not in ["TCP", "UDP", "ICMP"]:
+            print("Tipo de pacote inválido. Digite novamente.")
+        else:
+            break
+
     total_packets = int(input("Digite o número total de pacotes a serem enviados (-1 para enviar continuamente): "))
     timeout = int(input("Digite o tempo limite em segundos (0 para nenhum): "))
 
@@ -99,16 +127,14 @@ def main():
         packet_type = UDP
     elif packet_type == "ICMP":
         packet_type = ICMP
-    else:
-        print("Tipo de pacote inválido. Saindo do programa.")
-        return
 
     while True:
+        os.system('cls' if os.name == 'nt' else 'clear')  # Limpar a tela antes de exibir o menu
         choice = menu()
 
         if choice == '1':
-            send_packets(target_site, num_threads, interval, specific_ports, packet_type, total_packets, timeout)
-        elif choice == '2':
+            send_packets(target_site, num_threads, specific_ports, packet_type, total_packets, timeout)
+        elif choice == '3':
             print("Saindo do programa.")
             break
         else:
@@ -116,3 +142,4 @@ def main():
 
 if __name__ == "__main__":
     main()
+    
