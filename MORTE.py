@@ -33,10 +33,7 @@ def send_packet(source_ip, target_IP, source_port, packet_type, timeout):
     global packets_sent, response_time
 
     packet = IP(src=source_ip, dst=target_IP) / packet_type(sport=source_port)
-    response = sr1(packet, timeout=timeout, verbose=0)
-
-    if response:
-        response_time = time.time() - start_time
+    send(packet, verbose=0)  # Utilizamos send() para enviar o pacote sem esperar por resposta
 
     packets_sent += 1
 
@@ -134,4 +131,4 @@ def main():
 
 if __name__ == "__main__":
     main()
-                                             
+    
