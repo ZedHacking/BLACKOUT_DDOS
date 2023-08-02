@@ -4,7 +4,11 @@ import socket
 import time
 import concurrent.futures
 import os
+import logging  # Importamos a biblioteca 'logging' para configurar o nível de log
 from scapy.all import *
+
+# Configuração do nível de log para evitar o aviso "CRITICAL: Can't open /proc/net/dev!"
+logging.getLogger("scapy.runtime").setLevel(logging.ERROR)
 
 # Variáveis para medição de desempenho
 packets_sent = 0
